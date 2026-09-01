@@ -1,6 +1,6 @@
 # Cloud Architecture Sandbox
 
-A hands-on learning sandbox for mastering software architecture patterns through real-world altruistic scenarios deployed in a local Kubernetes environment.
+A hands-on learning sandbox for mastering software architecture patterns through real-world scenarios deployed in a local Kubernetes environment.
 
 ## Overview
 
@@ -8,7 +8,7 @@ This repository provides a structured approach to learning cloud-native architec
 
 ## Learning Philosophy
 
-Rather than abstract examples, this sandbox uses **altruistic project scenarios** to teach architecture patterns:
+Rather than abstract examples, this sandbox uses **real world project scenarios** to teach architecture patterns:
 
 - 🏥 Healthcare networks for underserved populations
 - 🌍 Environmental monitoring and climate research
