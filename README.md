@@ -71,12 +71,16 @@ See [`learning-scenarios.md`](learning-scenarios.md) for detailed scenario descr
 ### Core Infrastructure
 - **Cluster**: Kind (Kubernetes in Docker)
 - **Ingress & Traffic Management**: Envoy Gateway using Kubernetes Gateway API
-- **Event Streaming**: Redpanda (Kafka-API compatible, zero-JVM)
+- **Messaging**: NATS, RabbitMQ, Redpanda, or Redis Pub/Sub (selected based on scenario requirements)
 - **Data Stores**: PostgreSQL, Redis, InfluxDB, TimescaleDB (deployed per scenario)
 
-### Non-Negotiables
+### Design Principles
 - All ingress/routing uses **Envoy Gateway** with Gateway API resources (`Gateway`, `HTTPRoute`, `ClientTrafficPolicy`, `BackendTrafficPolicy`)
-- All messaging/events use **Redpanda** unless another technology explicitly fits the scenario requirements
+- Messaging technology is selected based on pattern requirements:
+  - **NATS**: IoT/edge computing, request/reply, scatter-gather, lightweight pub/sub
+  - **RabbitMQ**: Work queues, enterprise integration, priority queues, reliable delivery
+  - **Redpanda**: Event sourcing, saga patterns, high-throughput event logs (Kafka-compatible)
+  - **Redis Pub/Sub**: Simple real-time notifications, ephemeral messaging
 
 ## Getting Started
 

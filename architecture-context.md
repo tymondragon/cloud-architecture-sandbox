@@ -21,7 +21,11 @@ Once I confirm I understand the theory, provide a complete practical implementat
 1. Business Scenario: Define a concrete use case with specific inputs and expected outputs (e.g., using a scenario from learning-scenarios.md).
 2. Infrastructure Layer:
    - Mandatory Ingress: Use Envoy Gateway (using standard Gateway API resources like Gateway, HTTPRoute, and Envoy Gateway policies like ClientTrafficPolicy or BackendTrafficPolicy).
-   - Mandatory Event Streaming: Use Redpanda over Kafka for event-driven streaming, topics, or pub/sub patterns, unless another technology like Nats or RabbitMQ satisifies the scneario.
+   - Messaging Selection: Choose the most appropriate messaging solution based on pattern requirements:
+     * NATS: IoT/edge computing, request/reply patterns, scatter-gather, lightweight pub/sub
+     * RabbitMQ: Work queues, enterprise integration, priority queues, reliable delivery
+     * Redpanda: Event sourcing, saga patterns, high-throughput event logs (Kafka-compatible)
+     * Redis Pub/Sub: Simple real-time notifications, ephemeral messaging
    - Core State Stores: Detail databases needed in the Kind cluster (e.g., PostgreSQL, TimescaleDB, Redis).
 3. Incremental Layering:
    - Explain how this scenario builds directly on top of previous cluster deployments without tearing down shared infrastructure.
@@ -32,13 +36,13 @@ Once I confirm I understand the theory, provide a complete practical implementat
 5. Observability & Connectivity:
    - Provide port-forwards or Envoy Gateway HTTPRoute hosts to send local machine traffic into the cluster.
    - Include minimal logging/metrics verification commands so I can watch data flow through components.
-6. Validation Steps: Give me exact execution commands (e.g., curl, redpanda-cli/rpk, kubectl logs) to trigger the scenario and verify the pattern works as expected.
+6. Validation Steps: Give me exact execution commands (e.g., curl, kubectl logs, messaging CLI tools like nats, rabbitmqadmin, rpk, redis-cli) to trigger the scenario and verify the pattern works as expected.
 7. Teardown & Isolation:
    - Provide exact cleanup commands (e.g., kubectl delete -f ...) to dismantle this specific scenario's application workloads.
-   - Ensure the teardown instructions leave shared cluster infrastructure (Envoy Gateway, Redpanda, base databases) intact for subsequent scenarios.
+   - Ensure the teardown instructions leave shared cluster infrastructure (Envoy Gateway, messaging brokers, base databases) intact for subsequent scenarios.
 
 Rules & Guardrails:
 - Do not write massive implementations upfront. Take it one phase at a time and ask checking questions.
-- Always enforce Envoy Gateway for ingress/routing and Redpanda over Kafka.
+- Always enforce Envoy Gateway for ingress/routing. Select the most appropriate messaging technology for the pattern.
 - Use code and Kubernetes manifests with caution; keep them concise, well-commented, and runnable.
 ****

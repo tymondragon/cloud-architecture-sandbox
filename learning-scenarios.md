@@ -1,6 +1,6 @@
 # Software Architecture Scenario Catalog
 
-A collection of system scenarios designed for local execution inside a Kind (Kubernetes in Docker) cluster using Envoy Gateway for ingress/traffic control and Redpanda for high-throughput event streaming.
+A collection of system scenarios designed for local execution inside a Kind (Kubernetes in Docker) cluster using Envoy Gateway for ingress/traffic control and appropriate messaging solutions (NATS, RabbitMQ, Redpanda, Redis Pub/Sub) selected based on each scenario's requirements.
 
 ---
 
@@ -46,7 +46,7 @@ An automated IoT acoustic monitoring network that ingests high-frequency audio t
 ### Architecture Evolution
 
 - **Phase 1: Pipes and Filters / Stream Processing**
-  - Stream raw sensor telemetry into Redpanda topics.
+  - Stream raw sensor telemetry into NATS subjects for lightweight IoT data ingestion.
   - Pass streams through specialized processing pods:
     - *Filter 1*: Background noise reduction.
     - *Filter 2*: Audio fingerprinting & ML model evaluation.
@@ -57,7 +57,7 @@ An automated IoT acoustic monitoring network that ingests high-frequency audio t
 ### Kind & Envoy Infrastructure
 
 - **Databases**: TimescaleDB / InfluxDB (Time-series data).
-- **Messaging**: Redpanda (Kafka API compatible, zero-JVM footprint).
+- **Messaging**: NATS (lightweight, designed for IoT and edge computing with low resource footprint).
 - **Envoy Gateway Traffic Policies**: Envoy Gateway `BackendTrafficPolicy` for circuit breaking and timeout rules on ingress routes to gracefully handle high-latency or unstable satellite links.
 
 ---
@@ -106,13 +106,13 @@ A global, open-source community platform ingesting continuous environmental tele
   - Decouple core domain logic (AQI calculation rules, safety threshold triggers) from external dependencies (databases, messaging brokers, HTTP frameworks).
   - Enable hot-swapping storage engines (e.g., switching PostgreSQL for InfluxDB) without altering core business rules.
 - **Phase 2: Event Sourcing**
-  - Store every sensor reading as an immutable, append-only Redpanda topic stream rather than mutating state.
-  - Replay Redpanda event streams to reconstruct historical data states and provide verifiable data auditing.
+  - Store every sensor reading as an immutable, append-only event stream rather than mutating state.
+  - Replay event streams to reconstruct historical data states and provide verifiable data auditing.
 
 ### Kind & Envoy Infrastructure
 
 - **Databases**: InfluxDB or TimescaleDB.
-- **Messaging**: Redpanda or NATS.
+- **Messaging**: NATS JetStream (stream-based messaging with event sourcing capabilities) or Redpanda (Kafka-compatible event log).
 - **Envoy Gateway Traffic Policies**: API routing rules using Kubernetes Gateway API (`HTTPRoute`) managed by Envoy Gateway to separate public contributor endpoints from internal processing services.
 
 ---
@@ -142,7 +142,7 @@ A federated healthcare network connecting independent rural clinics, mobile heal
 ### Kind & Envoy Infrastructure
 
 - **Databases**: PostgreSQL (per-region sharding).
-- **Messaging**: Redpanda for async result aggregation.
+- **Messaging**: NATS (built-in request/reply pattern ideal for scatter-gather with timeout support).
 - **Envoy Gateway Traffic Policies**: Envoy Gateway `BackendTrafficPolicy` for circuit breaking and connection pooling; `HTTPRoute` with weighted load balancing across regional services; timeout policies for scatter-gather request coordination.
 
 ---
@@ -164,7 +164,7 @@ A collaborative platform for processing large-scale climate research datasets (s
   - Split large satellite image datasets across worker pods (Map phase).
   - Each worker applies data normalization and feature extraction in parallel.
   - Reduce phase aggregates processed chunks into unified climate models.
-  - Use Redpanda to coordinate map tasks and collect reduce results.
+  - Use RabbitMQ work queues to distribute map tasks and collect reduce results.
 - **Phase 2: Sidecar & Ambassador Pattern**
   - Deploy metric collection sidecars alongside each worker pod for transparent observability.
   - Use ambassador pattern to proxy external S3/object storage access with consistent auth.
@@ -173,7 +173,7 @@ A collaborative platform for processing large-scale climate research datasets (s
 ### Kind & Envoy Infrastructure
 
 - **Databases**: InfluxDB (time-series metrics) + S3-compatible MinIO (object storage).
-- **Messaging**: Redpanda for task distribution and result collection.
+- **Messaging**: RabbitMQ (work queues with fair dispatch and acknowledgments, ideal for distributed task processing).
 - **Envoy Gateway Traffic Policies**: Envoy Gateway `Gateway` routes for external API access; sidecar proxies for telemetry collection.
 
 ---
@@ -204,7 +204,7 @@ A web portal serving displaced populations with aid resources, legal assistance,
 ### Kind & Envoy Infrastructure
 
 - **Databases**: PostgreSQL (modern domain model) + adapter layer for legacy systems.
-- **Messaging**: Redpanda for async legacy system integration.
+- **Messaging**: RabbitMQ (enterprise integration patterns with routing, transformation, and dead letter queues for legacy system integration).
 - **Envoy Gateway Traffic Policies**: Envoy Gateway `HTTPRoute` with path-based routing to different BFF services (`/mobile/*`, `/web/*`, `/sms/*`); header-based routing for API versioning.
 
 ---
@@ -236,5 +236,5 @@ A critical national alert system for distributing emergency warnings (earthquake
 ### Kind & Envoy Infrastructure
 
 - **Databases**: PostgreSQL (alert history) + Redis (rate limiting state).
-- **Messaging**: Redpanda for alert distribution pipeline.
+- **Messaging**: RabbitMQ (priority queues for high/low priority alerts, guaranteed delivery with acknowledgments and durable queues).
 - **Envoy Gateway Traffic Policies**: Envoy Gateway `HTTPRoute` with weighted traffic splitting for canary deployments; `ClientTrafficPolicy` for rate limiting and connection management; separate routing rules for blue/green environment switching.

@@ -8,7 +8,7 @@ A hands-on learning repository designed to master advanced software architecture
 ## Infrastructure Baseline
 - **Local Cluster**: Kind (`cluster/kind-config.yaml`)
 - **Ingress & Traffic Control**: **Envoy Gateway** using Kubernetes Gateway API (`Gateway`, `HTTPRoute`, `ClientTrafficPolicy`, `BackendTrafficPolicy`)
-- **Event Streaming / Broker**: **Redpanda** (Kafka-API compatible, zero-JVM)
+- **Messaging / Event Streaming**: **NATS**, **RabbitMQ**, **Redpanda**, or **Redis Pub/Sub** (selected based on scenario requirements)
 - **Data Stores**: PostgreSQL, Redis, InfluxDB/TimescaleDB (deployed on-demand per scenario)
 
 ---
@@ -32,7 +32,7 @@ A hands-on learning repository designed to master advanced software architecture
 ## Interactive Learning Rules
 1. **Two-Phase Workflow**:
    - **Phase 1 (Concept)**: Explain the pattern (3-sentence analogy, problem/trade-offs, minimal code snippet, Socratic check).
-   - **Phase 2 (Blueprint)**: Provide Kind cluster specs, Envoy Gateway routes, Redpanda topics, and validation commands.
+   - **Phase 2 (Blueprint)**: Provide Kind cluster specs, Envoy Gateway routes, appropriate messaging configuration, and validation commands.
 2. **Incremental Scenarios**: Every pattern builds on top of previous infrastructure without tearing down core databases or brokers.
 3. **Clean Teardowns**: Always provide exact `kubectl delete` commands for scenario-specific workloads while keeping shared `infra/` intact.
-4. **Mandatory Tech**: Always enforce **Envoy Gateway** for traffic routing and **Redpanda** for messaging/events.
+4. **Mandatory Tech**: Always enforce **Envoy Gateway** for traffic routing. Select messaging technology (NATS, RabbitMQ, Redpanda, Redis Pub/Sub) based on scenario requirements and pattern characteristics.

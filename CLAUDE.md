@@ -10,10 +10,16 @@ This is a **hands-on learning sandbox** for mastering software architecture patt
 
 - **Cluster**: Kind (Kubernetes in Docker)
 - **Ingress & Traffic**: Envoy Gateway using Kubernetes Gateway API (`Gateway`, `HTTPRoute`, `ClientTrafficPolicy`, `BackendTrafficPolicy`)
-- **Event Streaming**: Redpanda (Kafka-API compatible, zero-JVM)
+- **Messaging**: NATS, RabbitMQ, Redpanda, or Redis Pub/Sub (selected based on scenario requirements)
 - **Data Stores**: PostgreSQL, Redis, InfluxDB/TimescaleDB (deployed per scenario)
 
-**Non-Negotiable**: Always use Envoy Gateway for ingress/routing and Redpanda for messaging/events unless another technology explicitly fits the scenario requirements.
+**Non-Negotiable**: Always use Envoy Gateway for ingress/routing.
+
+**Messaging Selection**: Choose the messaging solution that best fits the pattern requirements:
+- **NATS**: IoT/edge computing, request/reply patterns, scatter-gather, lightweight pub/sub
+- **RabbitMQ**: Work queues, enterprise integration, priority queues, reliable delivery
+- **Redpanda**: Event sourcing, saga patterns, high-throughput event logs (Kafka-compatible)
+- **Redis Pub/Sub**: Simple real-time notifications, ephemeral messaging
 
 ## Learning Workflow (Two-Phase Approach)
 
