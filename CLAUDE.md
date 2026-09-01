@@ -12,8 +12,11 @@ This is a **hands-on learning sandbox** for mastering software architecture patt
 - **Ingress & Traffic**: Envoy Gateway using Kubernetes Gateway API (`Gateway`, `HTTPRoute`, `ClientTrafficPolicy`, `BackendTrafficPolicy`)
 - **Messaging**: NATS, RabbitMQ, Redpanda, or Redis Pub/Sub (selected based on scenario requirements)
 - **Data Stores**: PostgreSQL, Redis, InfluxDB/TimescaleDB (deployed per scenario)
+- **Package Manager**: Helm for all infrastructure deployments
 
-**Non-Negotiable**: Always use Envoy Gateway for ingress/routing.
+**Non-Negotiable**:
+- Always use Envoy Gateway for ingress/routing
+- Always use Helm charts for deploying infrastructure components
 
 **Messaging Selection**: Choose the messaging solution that best fits the pattern requirements:
 - **NATS**: IoT/edge computing, request/reply patterns, scatter-gather, lightweight pub/sub
@@ -114,3 +117,4 @@ See `learning-scenarios.md` for full details.
 - **Observable**: Every implementation includes verification commands and logging
 - **Practical**: Focus on runnable, deployable code over theoretical examples
 - **Interactive**: Use checking questions and step-by-step progression, not massive upfront implementations
+- **Helm-First**: Use Helm charts for all infrastructure deployments (Envoy Gateway, messaging brokers, databases)

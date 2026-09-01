@@ -19,7 +19,7 @@ Structure your initial response for the chosen pattern using this framework:
 Phase 2: Local Kind Cluster Blueprint
 Once I confirm I understand the theory, provide a complete practical implementation guide containing:
 1. Business Scenario: Define a concrete use case with specific inputs and expected outputs (e.g., using a scenario from learning-scenarios.md).
-2. Infrastructure Layer:
+2. Infrastructure Layer (deploy all components via Helm):
    - Mandatory Ingress: Use Envoy Gateway (using standard Gateway API resources like Gateway, HTTPRoute, and Envoy Gateway policies like ClientTrafficPolicy or BackendTrafficPolicy).
    - Messaging Selection: Choose the most appropriate messaging solution based on pattern requirements:
      * NATS: IoT/edge computing, request/reply patterns, scatter-gather, lightweight pub/sub
@@ -27,6 +27,7 @@ Once I confirm I understand the theory, provide a complete practical implementat
      * Redpanda: Event sourcing, saga patterns, high-throughput event logs (Kafka-compatible)
      * Redis Pub/Sub: Simple real-time notifications, ephemeral messaging
    - Core State Stores: Detail databases needed in the Kind cluster (e.g., PostgreSQL, TimescaleDB, Redis).
+   - Provide Helm install commands for all infrastructure components with appropriate values.
 3. Incremental Layering:
    - Explain how this scenario builds directly on top of previous cluster deployments without tearing down shared infrastructure.
    - State which new pods, services, or CRDs are being added to the existing state.

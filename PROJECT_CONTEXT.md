@@ -7,22 +7,25 @@ A hands-on learning repository designed to master advanced software architecture
 
 ## Infrastructure Baseline
 - **Local Cluster**: Kind (`cluster/kind-config.yaml`)
+- **Package Manager**: Helm (for all infrastructure deployments)
 - **Ingress & Traffic Control**: **Envoy Gateway** using Kubernetes Gateway API (`Gateway`, `HTTPRoute`, `ClientTrafficPolicy`, `BackendTrafficPolicy`)
 - **Messaging / Event Streaming**: **NATS**, **RabbitMQ**, **Redpanda**, or **Redis Pub/Sub** (selected based on scenario requirements)
-- **Data Stores**: PostgreSQL, Redis, InfluxDB/TimescaleDB (deployed on-demand per scenario)
+- **Data Stores**: PostgreSQL, Redis, InfluxDB/TimescaleDB (deployed on-demand per scenario via Helm)
 
 ---
 
 ## Repository Structure
 .
-├── claude-architecture-context.md   # Detailed teaching prompt framework
+├── architecture-context.md          # Detailed teaching prompt framework
 ├── learning-scenarios.md            # Scenario domain catalog
 ├── cluster/
 │   └── kind-config.yaml             # Cluster configuration & node port mappings
 ├── infra/
-│   ├── envoy-gateway/               # Gateway API & Envoy manifests
-│   ├── redpanda/                    # Redpanda cluster manifests
-│   └── storage/                     # Database PVCs & StatefulSets
+│   ├── envoy-gateway/               # Envoy Gateway Helm values & Gateway API resources
+│   ├── nats/                        # NATS Helm values
+│   ├── rabbitmq/                    # RabbitMQ Helm values
+│   ├── redpanda/                    # Redpanda Helm values
+│   └── databases/                   # Database Helm values (PostgreSQL, Redis, etc.)
 └── scenarios/
     ├── scenario-01-eda/             # Workloads for Event-Driven Architecture
     └── scenario-02-saga/            # Workloads for Saga Pattern

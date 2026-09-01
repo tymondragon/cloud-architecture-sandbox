@@ -70,11 +70,13 @@ See [`learning-scenarios.md`](learning-scenarios.md) for detailed scenario descr
 
 ### Core Infrastructure
 - **Cluster**: Kind (Kubernetes in Docker)
+- **Package Manager**: Helm (for all infrastructure deployments)
 - **Ingress & Traffic Management**: Envoy Gateway using Kubernetes Gateway API
 - **Messaging**: NATS, RabbitMQ, Redpanda, or Redis Pub/Sub (selected based on scenario requirements)
 - **Data Stores**: PostgreSQL, Redis, InfluxDB, TimescaleDB (deployed per scenario)
 
 ### Design Principles
+- All infrastructure components deployed via **Helm charts**
 - All ingress/routing uses **Envoy Gateway** with Gateway API resources (`Gateway`, `HTTPRoute`, `ClientTrafficPolicy`, `BackendTrafficPolicy`)
 - Messaging technology is selected based on pattern requirements:
   - **NATS**: IoT/edge computing, request/reply, scatter-gather, lightweight pub/sub
@@ -100,8 +102,16 @@ cd cloud-architecture-sandbox
 # Create the Kind cluster
 kind create cluster --config cluster/kind-config.yaml
 
-# Deploy base infrastructure (when manifests are added)
-kubectl apply -k infra/
+# Add Helm repositories
+helm repo add envoy-gateway https://gateway.envoyproxy.io
+helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+helm repo add rabbitmq https://charts.rabbitmq.com/
+helm repo add redpanda https://charts.redpanda.com/
+helm repo update
+
+# Install base infrastructure (example - specific scenarios will detail requirements)
+# Envoy Gateway
+helm install eg envoy-gateway/gateway-helm --namespace envoy-gateway-system --create-namespace
 
 # Choose a scenario and follow its implementation guide
 # See learning-scenarios.md for details
@@ -117,10 +127,12 @@ kubectl apply -k infra/
 ├── architecture-context.md     # Teaching framework template
 ├── learning-scenarios.md       # 8 scenario domain catalog
 ├── cluster/                    # Kind cluster configurations
-├── infra/                      # Shared infrastructure manifests
-│   ├── envoy-gateway/          # Gateway API resources
-│   ├── redpanda/               # Event broker
-│   └── storage/                # Database PVCs & StatefulSets
+├── infra/                      # Shared infrastructure (Helm values files)
+│   ├── envoy-gateway/          # Envoy Gateway Helm values & Gateway API resources
+│   ├── nats/                   # NATS Helm values
+│   ├── rabbitmq/               # RabbitMQ Helm values
+│   ├── redpanda/               # Redpanda Helm values
+│   └── databases/              # Database Helm values (PostgreSQL, Redis, etc.)
 └── scenarios/                  # Per-scenario workloads
     ├── scenario-01-eda/
     ├── scenario-02-saga/
