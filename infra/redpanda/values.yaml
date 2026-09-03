@@ -1,0 +1,31 @@
+# Redpanda Helm values for cloud-architecture-sandbox
+# Optimized for local Kind cluster learning environment
+
+auth:
+  sasl:
+    enabled: false  # Simplified for learning; enable in production
+
+storage:
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+    storageClass: standard
+
+resources:
+  cpu:
+    cores: 1
+  memory:
+    container:
+      max: 2Gi
+
+# Single-node setup for local development
+statefulset:
+  replicas: 1
+
+# Disable external connectivity (use port-forward)
+external:
+  enabled: false
+
+# Enable Redpanda Console for web UI
+console:
+  enabled: true

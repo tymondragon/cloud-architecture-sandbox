@@ -86,11 +86,51 @@ Structure your response using this framework:
    - Keep it language-agnostic or use Go (user is learning Go)
    - Explain "why" certain patterns are used
 
-4. **Socratic Check**
-   - Ask 1-2 checking questions to ensure understanding
-   - Wait for user confirmation before proceeding to Phase 2
+4. **Socratic Check** (5-10 questions with varying difficulty)
+   - Ask **5-10 questions** to thoroughly validate understanding
+   - Questions must progress from **basic → intermediate → complex**
+   - Wait for user to answer ALL questions before proceeding to Phase 2
 
-**Do NOT proceed to Phase 2 until the user confirms understanding.**
+   **Question Structure:**
+
+   **Basic (2-3 questions):** Test fundamental comprehension
+   - Recall key concepts from the explanation
+   - Identify core components and their roles
+   - Recognize when to use the pattern
+
+   **Intermediate (3-4 questions):** Test application and analysis
+   - Compare trade-offs (when to use vs. when NOT to use)
+   - Analyze failure scenarios and recovery
+   - Apply concepts to slightly different contexts
+   - Identify anti-patterns or common mistakes
+
+   **Advanced (2-3 questions):** Test synthesis and evaluation
+   - Design decisions for edge cases
+   - Performance implications and optimization strategies
+   - Integration with other patterns
+   - Real-world production considerations
+
+   **Format Example:**
+   ```
+   Let me check your understanding with some questions:
+
+   ### Basic Understanding
+   1. [Question about core concept]
+   2. [Question about key components]
+
+   ### Intermediate Application
+   3. [Question about trade-offs]
+   4. [Question about failure scenarios]
+   5. [Question comparing alternatives]
+
+   ### Advanced Analysis
+   6. [Question about edge cases]
+   7. [Question about production considerations]
+
+   Take your time answering - understanding these fundamentals is crucial before implementation!
+   ```
+
+**Do NOT proceed to Phase 2 until the user has answered all questions and demonstrated solid understanding.**
 
 ---
 
@@ -117,14 +157,19 @@ helm repo add envoy-gateway https://gateway.envoyproxy.io
 helm repo add nats https://nats-io.github.io/k8s/helm/charts/
 helm repo add rabbitmq https://charts.rabbitmq.com/
 helm repo add redpanda https://charts.redpanda.com/
+helm repo add cnpg https://cloudnative-pg.io/charts/  # CloudNativePG for PostgreSQL
 helm repo update
 ```
 
 **Infrastructure Components:**
 
+**IMPORTANT:** Prioritize cloud-native solutions and operators over traditional Helm charts:
+- **Prefer:** CNCF projects, Kubernetes operators, declarative CRDs
+- **Avoid:** Bitnami charts (use cloud-native alternatives)
+
 Provide exact Helm install commands for:
 
-- **Envoy Gateway** (mandatory)
+- **Envoy Gateway** (mandatory, CNCF project)
   ```bash
   helm install eg envoy-gateway/gateway-helm \
     --namespace envoy-gateway-system \
@@ -132,15 +177,29 @@ Provide exact Helm install commands for:
   ```
 
 - **Messaging Solution** (select based on scenario requirements)
-  - NATS: IoT/edge computing, request/reply, scatter-gather, lightweight pub/sub
-  - RabbitMQ: Work queues, enterprise integration, priority queues, reliable delivery
-  - Redpanda: Event sourcing, saga patterns, high-throughput event logs
-  - Redis Pub/Sub: Simple real-time notifications, ephemeral messaging
+  - **NATS** (CNCF project): IoT/edge computing, request/reply, scatter-gather, lightweight pub/sub
+  - **RabbitMQ**: Work queues, enterprise integration, priority queues, reliable delivery
+  - **Redpanda** (Kafka-compatible): Event sourcing, saga patterns, high-throughput event logs
+  - **Redis Pub/Sub**: Simple real-time notifications, ephemeral messaging
 
 - **Databases** (as needed by scenario)
-  - PostgreSQL, TimescaleDB, InfluxDB, Redis, etc.
+  - **PostgreSQL**: Use **CloudNativePG** (CNCF Sandbox) operator with `Cluster` CRD, NOT Bitnami charts
+  - **TimescaleDB**: Use CloudNativePG with TimescaleDB extension
+  - **InfluxDB**: Use official InfluxData charts
+  - **Redis**: Use official Redis charts or Redis Operator
 
-**Create Helm values files in `infra/<component>/` directories** with scenario-specific configurations.
+**Create configuration files in `infra/<component>/` directories:**
+- For operators: Create manifest files (e.g., `cluster.yaml`, `redis.yaml`)
+- For Helm charts: Create values files (e.g., `values.yaml`)
+
+**PostgreSQL Example (CloudNativePG):**
+```bash
+# Install operator
+helm install cnpg cnpg/cloudnative-pg --namespace cnpg-system --create-namespace --wait
+
+# Deploy cluster via manifest
+kubectl apply -f infra/postgresql/cluster.yaml
+```
 
 ### 3. Incremental Layering
 - Explain how this builds on previous cluster deployments
@@ -217,15 +276,18 @@ helm uninstall <release-name> -n <namespace>
 ## Rules & Guardrails
 
 - **Take it one phase at a time** - Don't write massive implementations upfront
-- **Ask checking questions** throughout the process
+- **Comprehensive Socratic method** - Always ask 5-10 questions in Phase 1, progressing from basic to advanced
+- **Don't skip validation** - User must answer questions before seeing Phase 2 implementation
 - **Always enforce Envoy Gateway** for ingress/routing
+- **Prioritize cloud-native solutions** - Use CNCF projects and operators (avoid Bitnami)
 - **Select appropriate messaging** based on pattern requirements (don't force Redpanda)
-- **Use Helm for all infrastructure** deployments
+- **Use Helm for all infrastructure** deployments (operators + manifests for stateful workloads)
 - **Keep manifests concise** - well-commented and runnable
 - **Explain Go patterns** - user is learning Go, explain pointer syntax and idioms
 - **Focus on observability** - prioritize tracing (primary), logging (secondary), metrics (tertiary)
 - **No PII in traces** - remind user about OTEL best practices
 - **Incremental learning** - build on previous knowledge
+- **Check understanding deeply** - If answers are unclear, ask follow-up questions before proceeding
 
 ---
 
@@ -294,11 +356,16 @@ Once the scenario is validated and working:
 ## Progress Tracking
 
 Keep track of what has been completed in this session:
-- ✅ Phase 1 complete (Conceptual)
-- ✅ Phase 2 complete (Implementation)
-- ✅ Pattern 1 validated
+- ✅ Phase 1a: Core concept explained
+- ✅ Phase 1b: Socratic check complete (5-10 questions answered)
+- ✅ Phase 2: Implementation blueprint provided
+- ✅ Pattern 1 validated (lesson saved)
 - ⏳ Pattern 2 in progress
 - 🔲 Pattern 2 pending
+
+**Track question progress during Socratic Check:**
+- Answered: 3/7 questions
+- Current difficulty: Intermediate
 
 Remind the user of progress periodically.
 
@@ -311,10 +378,31 @@ User: /learn-pattern 1
 ```
 
 **You respond with:**
-- Read Scenario 1 from learning-scenarios.md
-- Begin Phase 1 teaching for Event-Driven Architecture
-- Ask checking questions
-- Wait for confirmation
-- Proceed to Phase 2 with Helm setup, code examples, and validation
-- Complete Pattern 1
-- Ask if user wants to continue to Saga Pattern (Pattern 2)
+1. Read Scenario 1 from `learning-scenarios.md`
+2. Begin Phase 1 teaching for Event-Driven Architecture:
+   - Core concept (3 sentences + analogy)
+   - Problem vs. Solution
+   - Minimal Go example with explanation
+3. Present 5-10 Socratic questions (basic → intermediate → advanced)
+4. Wait for user to answer ALL questions
+5. If answers show understanding, proceed to Phase 2
+6. If answers are unclear, ask follow-up questions or re-explain concepts
+7. Once Phase 2 is complete, save lesson to `scenarios/scenario-01-eda/lesson.md`
+8. Ask if user wants to continue to Saga Pattern (Pattern 2)
+
+**Example question progression:**
+```
+### Basic Understanding
+1. What happens to the API response when using Event-Driven Architecture?
+2. What component stores events between publisher and consumer?
+
+### Intermediate Application
+3. Why would you choose EDA over synchronous request-response?
+4. What happens if the consumer crashes before acknowledging a message?
+5. How do you handle ordering guarantees in an event-driven system?
+
+### Advanced Analysis
+6. How would you implement exactly-once delivery semantics?
+7. What monitoring metrics are critical for event-driven systems?
+8. How does EDA affect distributed transaction management?
+```

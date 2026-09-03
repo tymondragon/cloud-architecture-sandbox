@@ -1,0 +1,63 @@
+# PostgreSQL Cluster using CloudNativePG operator
+# CNCF Sandbox project - cloud-native PostgreSQL management
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: databases
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: supply-db-credentials
+  namespace: databases
+type: kubernetes.io/basic-auth
+stringData:
+  username: supply_user
+  password: local-dev-password  # Use sealed secrets in production!
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: supply-db
+  namespace: databases
+spec:
+  instances: 1  # Single instance for local development
+
+  # Database initialization
+  bootstrap:
+    initdb:
+      database: supply_matching
+      owner: supply_user
+      secret:
+        name: supply-db-credentials
+
+  # Storage configuration
+  storage:
+    size: 5Gi
+    storageClass: standard
+
+  # Resource limits for local development
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: false
+
+  # Automatic backups (optional for learning)
+  # backup:
+  #   barmanObjectStore:
+  #     destinationPath: s3://backups/
+  #     s3Credentials:
+  #       accessKeyId:
+  #         name: backup-creds
+  #         key: ACCESS_KEY_ID
+  #       secretAccessKey:
+  #         name: backup-creds
+  #         key: ACCESS_SECRET_KEY
