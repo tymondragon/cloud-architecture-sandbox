@@ -118,3 +118,187 @@ See `learning-scenarios.md` for full details.
 - **Practical**: Focus on runnable, deployable code over theoretical examples
 - **Interactive**: Use checking questions and step-by-step progression, not massive upfront implementations
 - **Helm-First**: Use Helm charts for all infrastructure deployments (Envoy Gateway, messaging brokers, databases)
+
+## Interactive Learning Skill
+
+Use the `/learn-pattern` skill to start guided learning sessions:
+
+```bash
+# List all available scenarios
+/learn-pattern
+
+# Start a specific scenario (1-8)
+/learn-pattern 1
+
+# Start by pattern name
+/learn-pattern eda
+/learn-pattern "Saga Pattern"
+```
+
+The skill follows the two-phase approach: conceptual teaching first, then practical implementation with validation commands.
+
+## Common Commands
+
+### Cluster Management
+
+```bash
+# Create Kind cluster (if not exists)
+kind create cluster --config cluster/kind-config.yaml
+
+# Verify cluster
+kubectl cluster-info --context kind-kind
+kubectl get nodes
+
+# Delete cluster (removes everything)
+kind delete cluster
+```
+
+### Helm Repository Setup
+
+```bash
+# Add infrastructure Helm repositories
+helm repo add envoy-gateway https://gateway.envoyproxy.io
+helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+helm repo add rabbitmq https://charts.rabbitmq.com/
+helm repo add redpanda https://charts.redpanda.com/
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+# List added repositories
+helm repo list
+```
+
+### Helm Deployment Workflow
+
+```bash
+# Install infrastructure component
+helm install <release-name> <repo>/<chart> \
+  --namespace <namespace> \
+  --create-namespace \
+  -f infra/<component>/values.yaml
+
+# Upgrade with new values
+helm upgrade <release-name> <repo>/<chart> \
+  -f infra/<component>/values.yaml
+
+# List installed releases
+helm list --all-namespaces
+
+# Uninstall (remove component)
+helm uninstall <release-name> -n <namespace>
+
+# Dry-run to preview changes
+helm install --dry-run --debug <release-name> <repo>/<chart> -f values.yaml
+```
+
+### kubectl Operations
+
+```bash
+# Check deployments and pods
+kubectl get pods -n <namespace>
+kubectl get deployments -n <namespace>
+kubectl get svc -n <namespace>
+
+# Watch resources in real-time
+kubectl get pods -n <namespace> -w
+
+# Describe resources for debugging
+kubectl describe pod <pod-name> -n <namespace>
+kubectl describe svc <service-name> -n <namespace>
+
+# View logs
+kubectl logs -n <namespace> <pod-name> -f
+kubectl logs -n <namespace> <pod-name> --previous  # Previous container logs
+
+# Port-forward for local access
+kubectl port-forward -n <namespace> svc/<service> 8080:80
+
+# Apply manifests
+kubectl apply -f scenarios/scenario-01/
+kubectl apply -f infra/envoy-gateway/gateway.yaml
+
+# Delete scenario workloads
+kubectl delete -f scenarios/scenario-01/
+```
+
+### Messaging CLI Tools
+
+```bash
+# NATS
+nats pub <subject> <message>
+nats sub <subject>
+nats stream list
+nats consumer list <stream>
+
+# RabbitMQ (exec into pod)
+kubectl exec -n rabbitmq rabbitmq-0 -- rabbitmqctl list_queues
+kubectl exec -n rabbitmq rabbitmq-0 -- rabbitmqctl list_exchanges
+
+# Redpanda (rpk)
+kubectl exec -n redpanda redpanda-0 -- rpk topic list
+kubectl exec -n redpanda redpanda-0 -- rpk topic create <topic-name>
+kubectl exec -n redpanda redpanda-0 -- rpk topic consume <topic-name>
+kubectl exec -n redpanda redpanda-0 -- rpk topic produce <topic-name>
+
+# Redis (redis-cli)
+kubectl exec -n redis redis-0 -- redis-cli PING
+kubectl exec -n redis redis-0 -- redis-cli KEYS '*'
+kubectl exec -n redis redis-0 -- redis-cli SUBSCRIBE <channel>
+kubectl exec -n redis redis-0 -- redis-cli PUBLISH <channel> <message>
+```
+
+### Gateway API Resources
+
+```bash
+# View Gateway API resources
+kubectl get gateway -n envoy-gateway-system
+kubectl get httproute -n <namespace>
+kubectl get clienttrafficpolicy -n <namespace>
+kubectl get backendtrafficpolicy -n <namespace>
+
+# Describe for debugging
+kubectl describe gateway <gateway-name> -n envoy-gateway-system
+kubectl describe httproute <route-name> -n <namespace>
+```
+
+## Scenario Workflow
+
+When working through a scenario:
+
+1. **Read scenario details**: Check `learning-scenarios.md` for business context
+2. **Prepare cluster**: Ensure Kind cluster exists and Helm repos are added
+3. **Deploy shared infrastructure**: Envoy Gateway, messaging broker, databases (Helm)
+4. **Create scenario manifests**: Place in `scenarios/scenario-XX/`
+5. **Save Helm values**: Place in `infra/<component>/values.yaml` or `infra/<component>/scenario-XX-values.yaml`
+6. **Apply and validate**: Use kubectl apply, check logs, test with curl/messaging tools
+7. **Document validation commands**: Keep them in scenario README or implementation notes
+8. **Clean teardown**: Delete scenario workloads, preserve shared infrastructure
+
+## File Organization
+
+- **Helm values files**: `infra/<component>/values.yaml` or `infra/<component>/scenario-specific.yaml`
+- **Gateway API resources**: `infra/envoy-gateway/*.yaml` (shared) or `scenarios/scenario-XX/*.yaml` (scenario-specific)
+- **Application manifests**: `scenarios/scenario-XX/` (Deployments, Services, ConfigMaps)
+- **Cluster config**: `cluster/kind-config.yaml`
+- **Documentation**: Each scenario should include validation commands and cleanup steps
+
+## Troubleshooting
+
+```bash
+# Pod not starting
+kubectl describe pod <pod-name> -n <namespace>  # Check events
+kubectl logs <pod-name> -n <namespace>          # Check container logs
+
+# Service not accessible
+kubectl get svc -n <namespace>                  # Verify service exists
+kubectl get endpoints -n <namespace>            # Check if pods are backing service
+
+# Envoy Gateway routes not working
+kubectl get httproute -n <namespace> -o yaml    # Check route configuration
+kubectl logs -n envoy-gateway-system -l app.kubernetes.io/name=envoy-gateway -f
+
+# Helm release issues
+helm list --all-namespaces                      # Check release status
+helm status <release-name> -n <namespace>       # View release details
+helm rollback <release-name> -n <namespace>     # Rollback to previous version
+```
