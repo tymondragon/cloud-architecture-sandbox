@@ -229,13 +229,65 @@ helm uninstall <release-name> -n <namespace>
 
 ---
 
+## Lesson Documentation
+
+**CRITICAL:** After completing Phase 1 and Phase 2 for each pattern, save the lesson content to a markdown file:
+
+### Directory Structure
+
+```
+scenarios/
+├── scenario-01-eda/
+│   ├── lesson.md              # Complete lesson content
+│   ├── manifests/             # Kubernetes manifests
+│   │   ├── httproute.yaml
+│   │   ├── supply-api-deployment.yaml
+│   │   └── allocation-worker-deployment.yaml
+│   └── README.md              # Quick reference (optional)
+```
+
+### Lesson File Format
+
+Save to `scenarios/scenario-XX-<pattern-name>/lesson.md` with the following structure:
+
+```markdown
+# Scenario X: [Scenario Title]
+
+## Pattern 1: [Pattern Name]
+
+### Phase 1: Conceptual Teaching
+[All Phase 1 content - Core Concept, Problem vs Solution, Minimal Example, etc.]
+
+### Phase 2: Local Kind Cluster Blueprint
+[All Phase 2 content - Business Context, Infrastructure, Components, Validation, etc.]
+
+## Next Pattern: [Pattern 2 Name]
+[Brief preview of what's next]
+```
+
+### When to Save
+
+- **After user confirms understanding** in Phase 1 and you've completed Phase 2
+- **Before asking** if they want to continue to Pattern 2
+- This creates a permanent reference they can return to
+
+### Naming Convention
+
+- `scenario-01-eda` (Event-Driven Architecture)
+- `scenario-02-saga` (Saga Pattern)
+- `scenario-03-pubsub` (Publisher-Subscriber)
+- Use lowercase, hyphenated names based on the primary pattern
+
+---
+
 ## After Scenario Completion
 
 Once the scenario is validated and working:
 
-1. **Ask if the user wants to continue** to the second pattern in the scenario
-2. **If yes**, repeat Phase 1 → Phase 2 for the next pattern
-3. **If no**, thank them and remind them they can continue later with `/learn-pattern <number>`
+1. **Save the lesson content** to `scenarios/scenario-XX-<pattern>/lesson.md`
+2. **Ask if the user wants to continue** to the second pattern in the scenario
+3. **If yes**, repeat Phase 1 → Phase 2 for the next pattern, and save as a new scenario folder
+4. **If no**, thank them and remind them they can continue later with `/learn-pattern <number>`
 
 ---
 
