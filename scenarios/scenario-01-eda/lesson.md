@@ -166,7 +166,7 @@ kubectl get nodes
 # Add required repositories
 helm repo add envoy-gateway https://gateway.envoyproxy.io
 helm repo add redpanda https://charts.redpanda.com/
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add cnpg https://cloudnative-pg.io/charts/
 helm repo update
 
 # Verify repositories
@@ -253,36 +253,93 @@ kubectl get pods -n redpanda -w
 # Wait until STATUS is Running
 ```
 
-##### Install PostgreSQL (State Storage)
+##### Install CloudNativePG Operator (PostgreSQL)
 
-Create Helm values file at `infra/postgresql/values.yaml`:
+**Why CloudNativePG?**
+- CNCF Sandbox project (cloud-native best practices)
+- Uses Kubernetes operators (declarative cluster management)
+- Better than traditional Helm charts for stateful workloads
+- Automatic failover, backup, and recovery capabilities
 
-```yaml
-# PostgreSQL configuration for supply matching system
-auth:
-  database: supply_matching
-  username: supply_user
-  password: local-dev-password  # Use secrets in production
-
-primary:
-  persistence:
-    enabled: true
-    size: 5Gi
-
-metrics:
-  enabled: true
-  serviceMonitor:
-    enabled: false
-```
-
-Install PostgreSQL:
+Install the CloudNativePG operator:
 
 ```bash
-helm install postgresql bitnami/postgresql \
-  --namespace databases \
+helm install cnpg cnpg/cloudnative-pg \
+  --namespace cnpg-system \
   --create-namespace \
-  -f infra/postgresql/values.yaml \
   --wait
+```
+
+Verify operator is running:
+```bash
+kubectl get pods -n cnpg-system
+```
+
+Create PostgreSQL Cluster manifest at `infra/postgresql/cluster.yaml`:
+
+```yaml
+# PostgreSQL Cluster using CloudNativePG operator
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: supply-db
+  namespace: databases
+spec:
+  instances: 1  # Single instance for local development
+
+  # Database initialization
+  bootstrap:
+    initdb:
+      database: supply_matching
+      owner: supply_user
+      secret:
+        name: supply-db-credentials
+
+  # Storage configuration
+  storage:
+    size: 5Gi
+    storageClass: standard
+
+  # Resource limits for local development
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: false
+---
+# Secret for database credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: supply-db-credentials
+  namespace: databases
+type: kubernetes.io/basic-auth
+stringData:
+  username: supply_user
+  password: local-dev-password  # Use sealed secrets in production!
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: databases
+```
+
+Deploy the PostgreSQL cluster:
+
+```bash
+kubectl apply -f infra/postgresql/cluster.yaml
+```
+
+Wait for cluster to be ready:
+```bash
+kubectl wait --for=condition=Ready cluster/supply-db -n databases --timeout=5m
 ```
 
 ---
@@ -566,15 +623,18 @@ spec:
             - name: CONSUMER_GROUP
               value: "allocation-workers"
             - name: POSTGRES_HOST
-              value: "postgresql.databases.svc.cluster.local"
+              value: "supply-db-rw.databases.svc.cluster.local"  # CloudNativePG read-write service
             - name: POSTGRES_DB
               value: "supply_matching"
             - name: POSTGRES_USER
-              value: "supply_user"
+              valueFrom:
+                secretKeyRef:
+                  name: supply-db-credentials
+                  key: username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql
+                  name: supply-db-credentials
                   key: password
           resources:
             requests:
@@ -666,8 +726,8 @@ kubectl logs -n scenario-01 allocation-worker-5d7b8c9f4-abc12 -f
 ##### Check PostgreSQL Data
 
 ```bash
-# Connect to PostgreSQL
-kubectl exec -it -n databases postgresql-0 -- \
+# Connect to PostgreSQL (CloudNativePG cluster)
+kubectl exec -it -n databases supply-db-1 -- \
   psql -U supply_user -d supply_matching
 
 # Query allocations
@@ -688,12 +748,14 @@ Let's verify the Event-Driven Architecture is working end-to-end.
 # Check all pods are running
 kubectl get pods -n redpanda
 kubectl get pods -n databases
+kubectl get pods -n cnpg-system
 kubectl get pods -n envoy-gateway-system
 kubectl get pods -n scenario-01
 
 # Should see:
 # - redpanda-0 (Running)
-# - postgresql-0 (Running)
+# - supply-db-1 (Running) - CloudNativePG cluster
+# - cnpg-cloudnative-pg-* (Running) - Operator
 # - envoy-gateway-* (Running)
 # - supply-api-* (2 replicas Running)
 # - allocation-worker-* (3 replicas Running)
@@ -761,8 +823,8 @@ kubectl logs -n scenario-01 -l app=allocation-worker --tail=20
 ##### Step 6: Verify Database Write
 
 ```bash
-# Query PostgreSQL
-kubectl exec -it -n databases postgresql-0 -- \
+# Query PostgreSQL (CloudNativePG cluster)
+kubectl exec -it -n databases supply-db-1 -- \
   psql -U supply_user -d supply_matching -c \
   "SELECT request_id, location, status, allocated_warehouse FROM allocations WHERE request_id='TEST-001';"
 
@@ -829,8 +891,9 @@ kubectl exec -n redpanda redpanda-0 -- \
 ```bash
 # Keep these running:
 # - Envoy Gateway (envoy-gateway-system namespace)
+# - CloudNativePG Operator (cnpg-system namespace)
 # - Redpanda (redpanda namespace)
-# - PostgreSQL (databases namespace)
+# - PostgreSQL Cluster (databases namespace)
 ```
 
 ##### Full Teardown (Between Learning Sessions)
@@ -839,12 +902,13 @@ Only if starting completely fresh:
 
 ```bash
 # Remove everything
+kubectl delete -f infra/postgresql/cluster.yaml  # Delete PostgreSQL cluster
 helm uninstall redpanda -n redpanda
-helm uninstall postgresql -n databases
+helm uninstall cnpg -n cnpg-system
 helm uninstall eg -n envoy-gateway-system
 
 # Delete namespaces
-kubectl delete namespace redpanda databases scenario-01
+kubectl delete namespace redpanda databases cnpg-system scenario-01
 
 # Or delete entire cluster
 kind delete cluster

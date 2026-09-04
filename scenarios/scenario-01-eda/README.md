@@ -17,7 +17,7 @@ kind create cluster --config cluster/kind-config.yaml
 # Add Helm repos
 helm repo add envoy-gateway https://gateway.envoyproxy.io
 helm repo add redpanda https://charts.redpanda.com/
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add cnpg https://cloudnative-pg.io/charts/
 helm repo update
 ```
 
@@ -38,12 +38,15 @@ helm install redpanda redpanda/redpanda \
   -f ../../infra/redpanda/values.yaml \
   --wait
 
-# PostgreSQL
-helm install postgresql bitnami/postgresql \
-  --namespace databases \
+# CloudNativePG Operator
+helm install cnpg cnpg/cloudnative-pg \
+  --namespace cnpg-system \
   --create-namespace \
-  -f ../../infra/postgresql/values.yaml \
   --wait
+
+# PostgreSQL Cluster
+kubectl apply -f ../../infra/postgresql/cluster.yaml
+kubectl wait --for=condition=Ready cluster/supply-db -n databases --timeout=5m
 ```
 
 ### Deploy Application
@@ -87,8 +90,9 @@ kubectl logs -n scenario-01 -l app=allocation-worker -f
 kubectl delete namespace scenario-01
 
 # Full cleanup (includes infrastructure)
+kubectl delete -f ../../infra/postgresql/cluster.yaml
 helm uninstall redpanda -n redpanda
-helm uninstall postgresql -n databases
+helm uninstall cnpg -n cnpg-system
 helm uninstall eg -n envoy-gateway-system
 ```
 

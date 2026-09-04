@@ -35,3 +35,24 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+**/node_modules
+**/dist
+
+# Root-level package-lock (shouldn't exist)
+/package-lock.json
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Scenario temporary files
+scenarios/**/stubs.yaml
+scenarios/**/temp/
+scenarios/**/.tmp/
