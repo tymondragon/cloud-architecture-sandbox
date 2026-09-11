@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { GraphNode } from '../types/graph';
-  import { nodes, edges } from '../stores/graph';
+  import type { GraphNode } from '../types/scenario';
+  import { logicalGraph } from '../stores/scenario';
 
   export let selectedNode: GraphNode | null;
   export let onClose: () => void;
 
-  $: connectedEdges = selectedNode
-    ? Object.values($edges).filter(
+  $: connectedEdges = selectedNode && $logicalGraph
+    ? Object.values($logicalGraph.edges).filter(
         (e) => e.source === selectedNode.id || e.target === selectedNode.id
       )
     : [];

@@ -14,11 +14,12 @@ type GraphNode struct {
 
 // GraphEdge represents a relationship between Kubernetes resources
 type GraphEdge struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Kind   string `json:"kind"` // ownership, routing, selection, dataflow, parentRef
-	Label  string `json:"label,omitempty"`
+	ID       string            `json:"id"`
+	Source   string            `json:"source"`
+	Target   string            `json:"target"`
+	Kind     string            `json:"kind"` // ownership, routing, selection, dataflow, parentRef
+	Label    string            `json:"label,omitempty"`
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // Graph represents the complete cluster topology

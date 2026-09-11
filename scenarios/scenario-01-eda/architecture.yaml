@@ -1,0 +1,359 @@
+metadata:
+  id: "scenario-01"
+  title: "Natural Disaster Supply Matching"
+  description: "Coordinate emergency supply distribution using event-driven architecture and saga patterns to match supply offers with urgent requests in disaster relief scenarios."
+
+patterns:
+  primary:
+    - name: "Event-Driven Architecture"
+      description: "Services communicate asynchronously through events, enabling loose coupling and independent scaling. Events represent significant state changes in the system."
+      benefits:
+        - "Loose coupling between services"
+        - "Independent service scaling"
+        - "Asynchronous processing"
+        - "Event history and replay"
+      color: "#f97316"
+      icon: "⚡"
+
+  secondary:
+    - name: "Saga Pattern"
+      description: "Coordinates distributed transactions across multiple services through a sequence of local transactions. Each step publishes events to trigger the next step."
+      benefits:
+        - "Distributed transaction coordination"
+        - "Failure compensation through rollback events"
+        - "Maintains data consistency across services"
+      color: "#a855f7"
+      icon: "🔄"
+
+technologies:
+  - name: "Redpanda"
+    role: "Event streaming platform (Kafka-compatible)"
+    description: "Provides distributed event log for reliable event delivery and replay"
+
+  - name: "PostgreSQL"
+    role: "Relational database"
+    description: "Stores supply inventory, allocation state, and transaction history"
+
+  - name: "Go"
+    role: "Service implementation language"
+    description: "Lightweight, concurrent services for API and worker components"
+
+# Layout configuration for visualization
+layout:
+  type: "vertical"
+  options:
+    spacing: "relaxed"
+    fitToViewport: true
+    compactCards: true
+
+# Logical layers of the architecture (top to bottom)
+layers:
+  - id: "presentation"
+    name: "API Layer"
+    description: "External interfaces for system interaction and client communication"
+    color: "#3b82f6"
+    position: 0
+
+  - id: "integration"
+    name: "Integration Layer"
+    description: "Asynchronous communication infrastructure using event streaming"
+    color: "#f97316"
+    position: 1
+
+  - id: "processing"
+    name: "Business Logic Layer"
+    description: "Core application processing and business rule enforcement"
+    color: "#8b5cf6"
+    position: 2
+
+  - id: "data"
+    name: "Data Layer"
+    description: "Persistent storage for application state and event history"
+    color: "#10b981"
+    position: 3
+
+# Logical architecture components
+components:
+  - id: "supply-api"
+    name: "Supply API"
+    type: "api-gateway"
+    layer: "presentation"
+    role: "REST API Gateway"
+    description: "Accepts supply offers and requests from external clients. Validates input, publishes events to the event bus, and provides query endpoints for current system state."
+    icon: "🌐"
+    implementation:
+      kubernetes:
+        deployment: "supply-api"
+        service: "supply-api"
+        namespace: "scenario-01"
+
+  - id: "event-bus"
+    name: "Event Bus"
+    type: "message-broker"
+    layer: "integration"
+    role: "Event Streaming Platform"
+    description: "Decouples services through event streaming. Provides durable event log, replay capability, and guaranteed delivery. Events include SupplyOffered, SupplyRequested, AllocationMatched, AllocationCompleted."
+    icon: "📡"
+    implementation:
+      kubernetes:
+        statefulset: "redpanda"
+        service: "redpanda"
+        namespace: "redpanda"
+      abstractName: "Message Broker"
+      actualTechnology: "Redpanda"
+
+  - id: "allocation-worker"
+    name: "Allocation Worker"
+    type: "worker"
+    layer: "processing"
+    role: "Event Processor"
+    description: "Consumes supply and request events from the event bus. Implements matching algorithm to pair supplies with requests based on location, urgency, and availability. Publishes allocation events."
+    icon: "⚙️"
+    implementation:
+      kubernetes:
+        deployment: "allocation-worker"
+        namespace: "scenario-01"
+
+  - id: "supply-database"
+    name: "Supply Database"
+    type: "database"
+    layer: "data"
+    role: "Persistent Data Store"
+    description: "Stores supply inventory, request queue, allocation decisions, and transaction history. Provides ACID guarantees for critical state changes."
+    icon: "💾"
+    implementation:
+      kubernetes:
+        cluster: "supply-db"
+        service: "supply-db-rw"
+        namespace: "databases"
+      abstractName: "Data Store"
+      actualTechnology: "PostgreSQL"
+
+# Define how data flows through the architecture
+flows:
+  - from: "supply-api"
+    to: "event-bus"
+    type: "publish"
+    label: "Publishes SupplyOffered events"
+    description: "API receives supply offer, validates it, and publishes SupplyOffered event to Redpanda topic"
+    pattern: "Event-Driven Architecture"
+    edgeStyle:
+      color: "#f97316"
+      style: "solid"
+      animated: true
+
+  - from: "event-bus"
+    to: "allocation-worker"
+    type: "subscribe"
+    label: "Consumes supply/request events"
+    description: "Worker subscribes to supply and request topics, processes matching algorithm"
+    pattern: "Event-Driven Architecture"
+    edgeStyle:
+      color: "#f97316"
+      style: "solid"
+      animated: true
+
+  - from: "allocation-worker"
+    to: "event-bus"
+    type: "publish"
+    label: "Publishes AllocationMatched events"
+    description: "Worker publishes allocation decisions as events for downstream processing"
+    pattern: "Saga Pattern"
+    edgeStyle:
+      color: "#a855f7"
+      style: "dashed"
+      animated: true
+
+  - from: "allocation-worker"
+    to: "supply-database"
+    type: "read-write"
+    label: "Persists allocation state"
+    description: "Worker reads current inventory, writes allocation decisions"
+    pattern: "Saga Pattern"
+    edgeStyle:
+      color: "#6b7280"
+      style: "solid"
+      animated: false
+
+  - from: "supply-api"
+    to: "supply-database"
+    type: "read"
+    label: "Queries current state"
+    description: "API reads database for status queries and reporting"
+    edgeStyle:
+      color: "#6b7280"
+      style: "solid"
+      animated: false
+
+# Telemetry configuration for monitoring live data flow
+telemetry:
+  collectors:
+    - type: "redpanda"
+      component: "event-bus"
+      config:
+        adminApi: "http://redpanda.redpanda.svc.cluster.local:9644"
+        topics:
+          - "supply-offers"
+          - "supply-requests"
+          - "allocations"
+      metrics:
+        - messageRate
+        - consumerLag
+        - producerCount
+
+    - type: "postgres"
+      component: "supply-database"
+      config:
+        connectionString: "postgres://supply_user:local-dev-password@supply-db-rw.databases.svc.cluster.local:5432/supply_matching"
+      metrics:
+        - queryCount
+        - activeConnections
+        - insertRate
+
+    - type: "http"
+      component: "supply-api"
+      config:
+        endpoint: "http://supply-api.scenario-01.svc.cluster.local/metrics"
+      metrics:
+        - requestCount
+        - responseTime
+        - errorRate
+
+# Define example data flows for animation (Phase 3)
+dataFlows:
+  - id: "supply-offer-flow"
+    name: "Supply Offer Submission"
+    description: "Track how a supply offer flows through the system"
+    steps:
+      - component: "supply-api"
+        action: "receives"
+        description: "API receives HTTP POST request with supply offer"
+        duration: 10
+
+      - component: "event-bus"
+        action: "publishes"
+        description: "SupplyOffered event published to Redpanda topic"
+        duration: 5
+        telemetry:
+          collector: "redpanda"
+          metric: "topic.supply-offers.message-count"
+
+      - component: "allocation-worker"
+        action: "consumes"
+        description: "Worker picks up event from topic and processes"
+        duration: 50
+        telemetry:
+          collector: "redpanda"
+          metric: "consumer-group.allocation-workers.lag"
+
+      - component: "supply-database"
+        action: "persists"
+        description: "Supply record inserted into database"
+        duration: 15
+        telemetry:
+          collector: "postgres"
+          metric: "insert-count"
+
+  - id: "supply-request-flow"
+    name: "Supply Request Submission"
+    description: "Track how a supply request flows through the system"
+    steps:
+      - component: "supply-api"
+        action: "receives"
+        description: "API receives HTTP POST request with supply request"
+        duration: 10
+
+      - component: "event-bus"
+        action: "publishes"
+        description: "SupplyRequested event published to Redpanda topic"
+        duration: 5
+        telemetry:
+          collector: "redpanda"
+          metric: "topic.supply-requests.message-count"
+
+      - component: "allocation-worker"
+        action: "consumes"
+        description: "Worker consumes request, runs matching algorithm"
+        duration: 100
+
+      - component: "supply-database"
+        action: "read-write"
+        description: "Worker queries available supplies and writes allocation"
+        duration: 25
+
+      - component: "event-bus"
+        action: "publishes"
+        description: "AllocationMatched event published (Saga pattern)"
+        duration: 5
+        telemetry:
+          collector: "redpanda"
+          metric: "topic.allocations.message-count"
+
+# Test data generation (Phase 3)
+testDataGenerator:
+  endpoint: "http://supply-api.scenario-01.svc.cluster.local/api/v1/supplies"
+  method: "POST"
+  samplePayloads:
+    - name: "Medical Supplies Offer"
+      description: "Hospital offering surplus N95 masks"
+      data:
+        type: "offer"
+        category: "medical"
+        items:
+          - name: "N95 Masks"
+            quantity: 1000
+            unit: "boxes"
+        location:
+          city: "San Francisco"
+          state: "CA"
+          coordinates:
+            lat: 37.7749
+            lon: -122.4194
+        contact:
+          organization: "SF General Hospital"
+          phone: "415-555-0100"
+      expectedFlow: "supply-offer-flow"
+
+    - name: "Emergency Medical Request"
+      description: "Urgent request for medical supplies"
+      data:
+        type: "request"
+        category: "medical"
+        items:
+          - name: "N95 Masks"
+            quantity: 500
+            unit: "boxes"
+        urgency: "high"
+        location:
+          city: "Oakland"
+          state: "CA"
+          coordinates:
+            lat: 37.8044
+            lon: -122.2712
+        contact:
+          organization: "Oakland Emergency Response"
+          phone: "510-555-0200"
+      expectedFlow: "supply-request-flow"
+
+    - name: "Food Supplies Offer"
+      description: "Restaurant offering surplus non-perishable food"
+      data:
+        type: "offer"
+        category: "food"
+        items:
+          - name: "Canned Goods"
+            quantity: 200
+            unit: "cases"
+          - name: "Water Bottles"
+            quantity: 500
+            unit: "cases"
+        location:
+          city: "San Jose"
+          state: "CA"
+          coordinates:
+            lat: 37.3382
+            lon: -121.8863
+        contact:
+          organization: "San Jose Food Bank"
+          phone: "408-555-0300"
+      expectedFlow: "supply-offer-flow"

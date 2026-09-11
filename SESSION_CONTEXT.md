@@ -1,60 +1,151 @@
 # Cluster-Viz Development Session Context
 
-**Date**: 2026-09-04
-**Status**: In Progress - Visual Redesign Phase
+**Date**: 2026-09-11
+**Status**: Pluggable Layout System Complete ✅
+**Current Task**: Documentation and commit
+
+## Latest Progress (2026-09-11 - Session 3)
+
+### ✅ COMPLETED: Pluggable Layout System with Layer Sidebar
+
+**Major Architecture Redesign**: Transformed from single-layout visualization to a flexible, scenario-driven layout system with Discord-like sidebar interface.
+
+**Problem Solved**:
+- Original design required scrolling to see all components
+- Single vertical layout didn't suit all architecture patterns
+- No visual indication of layer organization
+
+**Solution Implemented**:
+- Layer sidebar (280px) on left showing all architectural layers
+- Pluggable layout engine supporting multiple visualization types
+- Hover highlighting between layers and components
+- Auto-scaling viewport (no scrolling required)
+- Scenario-driven layout configuration via YAML
+
+**Files Created**:
+- `cluster-viz/frontend/src/lib/components/LayerSidebar.svelte` - Left sidebar with layer definitions
+- `cluster-viz/frontend/src/lib/components/LayoutRouter.svelte` - Routes to appropriate layout engine
+- `cluster-viz/frontend/src/lib/components/layouts/VerticalLayout.svelte` - Vertical flow layout
+- `cluster-viz/frontend/src/lib/components/layouts/HorizontalLayout.svelte` - Placeholder for horizontal pipeline layout
+
+**Files Modified**:
+- `cluster-viz/frontend/src/App.svelte` - Complete rewrite with sidebar + visualization layout
+- `cluster-viz/frontend/src/lib/types/scenario.ts` - Added LayoutConfig and LayoutOptions interfaces
+- `cluster-viz/backend/pkg/models/scenario.go` - Added Layout field and structs
+- `scenarios/scenario-01-eda/architecture.yaml` - Added layout configuration section
+
+**Layout Configuration Schema**:
+```yaml
+layout:
+  type: "vertical"  # vertical | horizontal | radial | force-graph | grid | custom
+  options:
+    spacing: "relaxed"
+    fitToViewport: true
+    compactCards: true
+    centerComponent: "optional-node-id"  # For radial layouts
+    columns: 3  # For grid layouts
+    positions: {}  # For custom layouts
+```
+
+**Features Implemented**:
+- ✅ LayerSidebar component with color-coded layers
+- ✅ Hover highlighting (layer → components)
+- ✅ LayoutRouter with support for 5+ layout types
+- ✅ VerticalLayout with compact card mode
+- ✅ Auto-scaling viewport (no scrolling)
+- ✅ Backend scenario loader integration
+- ✅ Full TypeScript type safety
+
+**Visual Design**:
+- Discord-like sidebar layout
+- 4 architectural layers: API, Integration, Business Logic, Data
+- Compact component cards with health indicators
+- Smooth hover transitions
+- Glowing edges with SVG filters
+- Dark navy/black gradient background
+
+**Build & Deploy**:
+- ✅ Frontend build successful
+- ✅ Docker image built and deployed
+- ✅ Running in k3d cluster
+- ✅ Accessible at http://localhost:9090
+
+### Previous Work (2026-09-04)
+
+#### ✅ COMPLETED: Dark Theme Visual Redesign (Task #1)
+
+**Files Modified**:
+- `cluster-viz/frontend/src/lib/components/SimpleGraph.svelte` - Dark theme redesign
+- `cluster-viz/frontend/src/lib/components/StatusBar.svelte` - Dark theme update
+
+**Visual Changes**:
+- Dark navy/black gradient background (#0a0e27 → #1a1f3a)
+- Glowing nodes with gradient backgrounds
+- Translucent node cards with backdrop blur
+- SVG glow filters on edges
+- Pulsing animation on dataflow edges
+- Neon blue headers with text shadow
 
 ## Current State
 
 ### What's Working ✅
 
-1. **Cluster-viz Dashboard (Basic Version)**
-   - Backend: Go application that watches Kubernetes resources and builds a graph
-   - Frontend: Svelte 4 with custom SimpleGraph component (no external graph libraries)
+1. **Cluster-viz Dashboard (Pluggable Layout System)**
+   - Backend: Go application serving scenario metadata with layout configs
+   - Frontend: Svelte 4 with pluggable layout architecture
    - Real-time updates via WebSocket
-   - API endpoint: `/api/graph` returns filtered graph data
+   - Scenario API: `/api/scenarios`, `/api/scenario/{id}`, `/api/graph`
    - Deployment: Running in k3d cluster on namespace `cluster-viz`
    - Access: `http://localhost:9090` via port-forward
 
-2. **Graph Filtering**
-   - Successfully filters out infrastructure namespaces (cert-manager, envoy-gateway-system, cnpg-system, kube-system)
-   - Shows only lesson-relevant components (19 nodes, 18 edges currently)
-   - Includes: scenario-* namespaces, redpanda, databases, Gateway API resources
+2. **Layout System Architecture**
+   - **LayerSidebar**: Fixed 280px sidebar showing architectural layers
+   - **LayoutRouter**: Routes to appropriate layout based on scenario config
+   - **VerticalLayout**: Top-to-bottom flow with centered components
+   - **HorizontalLayout**: Placeholder for pipeline visualization
+   - **Future layouts**: Radial, force-graph, grid, custom
 
-3. **Graph Building Logic**
-   - **Nodes**: Deployments, Pods, Services, StatefulSets, HTTPRoutes, Gateways
-   - **Edges**:
-     - `ownership`: Deployment → Pods (via ownerReferences)
-     - `selection`: Service → Pods (via label selectors)
-     - `routing`: HTTPRoute → Service (via backendRefs)
-     - `parentRef`: Gateway → HTTPRoute (via parentRefs)
-     - `dataflow`: Pod → Service (detected via env vars with connection strings)
+3. **Scenario Loading**
+   - Loads from ConfigMaps (production) or filesystem (development)
+   - Full scenario metadata including patterns, technologies, layers, components, flows
+   - Layout configuration per scenario
+   - Supports multiple scenarios with dropdown switcher
 
-4. **Test Infrastructure Deployed**
-   - k3d cluster: `cloud-architecture-sandbox` (1 control-plane + 2 workers)
-   - Envoy Gateway (for Gateway API)
-   - Redpanda (event broker)
-   - CloudNativePG operator + PostgreSQL cluster
-   - Scenario-01 stubs: supply-api and allocation-worker (nginx placeholders)
+4. **Graph Building Logic**
+   - **Logical Abstraction**: Maps K8s resources to logical architecture components
+   - **Layers**: Presentation, Integration, Processing, Data
+   - **Components**: API gateways, message brokers, workers, databases
+   - **Flows**: Publish/subscribe, read-write, routing
+   - **Health**: Component health status from K8s
+
+5. **Visual Features**
+   - Hover highlighting between sidebar and components
+   - Health indicators (green/yellow/red dots)
+   - Technology badges (e.g., "💡 Redpanda", "💡 PostgreSQL")
+   - Replica counts
+   - SVG edges with glow effects
+   - Animated edges for event flows
 
 ### Technical Stack
 
 **Frontend**:
-- Svelte 4.2.20 (stable - Svelte 5 caused effect_orphan errors)
+- Svelte 4.2.20 (stable)
 - Vite 5.4.21
 - TypeScript
-- Tailwind CSS
-- Custom SVG-based graph rendering (no @xyflow/svelte)
+- Tailwind CSS (minimal usage)
+- Custom SVG-based rendering
 
 **Backend**:
 - Go with Kubernetes client-go
-- Watches: Deployments, Pods, Services, StatefulSets, HTTPRoutes, Gateways
-- WebSocket server for real-time graph updates
-- Embedded frontend (static files served from Go binary)
+- Scenario loader (ConfigMap or filesystem)
+- Logical graph mapper
+- WebSocket server for real-time updates
+- Embedded frontend (static files in Go binary)
 
 **Infrastructure**:
 - k3d cluster (Kubernetes in Docker)
 - Storage class: `local-path` (k3d default)
-- Helm used for all infrastructure deployments
+- Helm for infrastructure deployments
 
 ### Key Files
 
@@ -65,137 +156,171 @@ cluster-viz/
 │   ├── pkg/
 │   │   ├── k8s/
 │   │   │   ├── client.go
-│   │   │   ├── graph.go          # Graph building logic + filtering
+│   │   │   ├── graph.go          # Physical graph building
 │   │   │   └── watcher.go        # K8s resource watchers
 │   │   ├── models/
 │   │   │   ├── graph.go          # Graph data structures
+│   │   │   ├── scenario.go       # Scenario metadata (NEW: Layout field)
 │   │   │   └── events.go         # WebSocket event types
+│   │   ├── scenario/
+│   │   │   ├── loader.go         # Loads scenarios from ConfigMap/filesystem
+│   │   │   └── mapper.go         # Maps K8s → logical components
 │   │   └── api/
 │   │       └── handler.go        # HTTP + WebSocket handlers
 ├── frontend/
 │   ├── src/
-│   │   ├── App.svelte            # Main app (subscribes to stores, passes to SimpleGraph)
+│   │   ├── App.svelte            # Main app with sidebar + visualization layout (NEW)
 │   │   ├── lib/
 │   │   │   ├── components/
-│   │   │   │   ├── SimpleGraph.svelte   # Custom graph visualization
-│   │   │   │   ├── StatusBar.svelte     # Connection status + stats
-│   │   │   │   └── NodeDetails.svelte   # Sidebar panel for node info
+│   │   │   │   ├── LayerSidebar.svelte      # Left sidebar (NEW)
+│   │   │   │   ├── LayoutRouter.svelte      # Layout routing (NEW)
+│   │   │   │   ├── layouts/
+│   │   │   │   │   ├── VerticalLayout.svelte    # Vertical flow (NEW)
+│   │   │   │   │   └── HorizontalLayout.svelte  # Placeholder (NEW)
+│   │   │   │   ├── SimpleGraph.svelte       # Legacy (now replaced by layouts)
+│   │   │   │   ├── StatusBar.svelte         # Connection status
+│   │   │   │   ├── NodeDetails.svelte       # Sidebar panel for node info
+│   │   │   │   ├── PatternOverlay.svelte    # Pattern education overlay
+│   │   │   │   └── ScenarioSwitcher.svelte  # Scenario dropdown
 │   │   │   ├── stores/
-│   │   │   │   ├── graph.ts      # Svelte stores for nodes/edges
-│   │   │   │   └── websocket.ts  # WebSocket connection management
+│   │   │   │   ├── scenario.ts              # Scenario state management (NEW)
+│   │   │   │   ├── graph.ts                 # Graph state (legacy)
+│   │   │   │   └── websocket.ts             # WebSocket connection
 │   │   │   └── types/
-│   │   │       └── graph.ts      # TypeScript types
-│   ├── package.json              # Svelte 4, Vite 5
+│   │   │       ├── scenario.ts              # Scenario types (NEW: LayoutConfig)
+│   │   │       └── graph.ts                 # Graph types
+│   ├── package.json
 │   └── vite.config.ts
 ├── manifests/
 │   ├── deployment.yaml
 │   ├── service.yaml
 │   └── rbac.yaml
-└── Dockerfile                    # Multi-stage build (frontend + backend)
+└── Dockerfile                    # Multi-stage build
+
+scenarios/scenario-01-eda/
+├── architecture.yaml             # Scenario metadata (NEW: layout section)
+├── lesson.md
+├── stubs.yaml
+└── manifests/
 ```
 
-## Problems We Solved
+## Architecture: Pluggable Layout System
 
-### 1. Svelte 5 Effect_Orphan Error
-**Problem**: Using Svelte 5 runes in plain Vite setup caused persistent `effect_orphan` errors
-**Root Cause**: IDP (reference project) uses SvelteKit, not plain Vite. SvelteKit handles component initialization differently.
-**Solution**: Downgraded to Svelte 4 with the custom graph component
+### Data Flow
 
-### 2. @xyflow/svelte Incompatibility
-**Problem**: @xyflow/svelte library had Svelte 5 compatibility issues
-**Solution**: Built custom SimpleGraph component based on IDP's InfraDiagram pattern (pure SVG + HTML)
+1. **Scenario Loading** (Backend)
+   - Loader checks for ConfigMap `{scenario-id}-architecture` in cluster-viz namespace
+   - Falls back to filesystem at `/scenarios/{scenario-id}-eda/architecture.yaml`
+   - Parses YAML into `models.Scenario` struct including `Layout` field
 
-### 3. Too Much Infrastructure Noise
-**Problem**: Graph showed all cluster resources (50+ nodes) including cert-manager, operators, etc.
-**Solution**: Added `isLessonRelevant()` filter in `backend/pkg/k8s/graph.go` to only show scenario and data infrastructure
+2. **Logical Graph Mapping** (Backend)
+   - Mapper takes scenario metadata + physical K8s graph
+   - Maps K8s resources to logical components based on implementation.kubernetes fields
+   - Builds logical graph with layers, components, edges, health
 
-## Current Plan: Visual Redesign + Live Data Flow
+3. **API Endpoints** (Backend)
+   - `GET /api/scenarios` - List all scenarios (summary)
+   - `GET /api/scenario/{id}` - Full scenario metadata (includes layout config)
+   - `GET /api/graph?scenario={id}` - Logical graph for scenario
 
-### Task #1: Redesign Graph with Dark Theme ⏳ IN PROGRESS
-**Goal**: Transform boring white boxes into sleek, glowing visualization
+4. **Frontend Rendering** (Svelte)
+   - App.svelte fetches scenario metadata and logical graph
+   - LayoutRouter reads `scenario.layout.type` and routes to appropriate layout component
+   - Layout component (e.g., VerticalLayout) renders nodes, edges, hover highlighting
+   - LayerSidebar displays layers, emits hover events
 
-**Visual Changes**:
-- Dark navy/black background (#0a0e27 or similar)
-- Glowing nodes with CSS gradients and box-shadow
-- Neon accent colors:
-  - Cyan/blue for standard nodes
-  - Orange for dataflow edges (with glow)
-  - Purple for parentRef edges
-  - Blue for routing edges
-- Smooth animations and transitions
-- Better typography (light text on dark)
-- Node icons/badges with glow effects
+### Layout Types (Current & Planned)
 
-**Reference**: User provided image of dark-themed data pipeline diagram with glowing nodes and animated flow
+| Layout Type | Status | Best For | Example Pattern |
+|-------------|--------|----------|-----------------|
+| **vertical** | ✅ Implemented | Layered architectures, request/response flows | EDA, Saga, CQRS |
+| **horizontal** | 📋 Planned | Linear pipelines, data processing | Pipes & Filters, Map-Reduce |
+| **radial** | 📋 Planned | Hub-and-spoke, centralized components | API Gateway, Service Mesh |
+| **force-graph** | 📋 Planned | Complex interconnections, microservices | Event Sourcing, Microservices |
+| **grid** | 📋 Planned | Matrix layouts, replicated services | Scatter-Gather, Load Balancing |
+| **custom** | 📋 Planned | Scenario-specific positioning | Special cases |
 
-**Files to Modify**:
-- `frontend/src/lib/components/SimpleGraph.svelte` (complete redesign of styles)
-- May need to update `App.svelte` for dark background
+### Example: Vertical Layout Config
 
-### Task #2: Add Redpanda Metrics Collector 📋 TODO
-**Goal**: Monitor real-time message flow through Redpanda
+```yaml
+layout:
+  type: "vertical"
+  options:
+    spacing: "relaxed"      # relaxed | compact | wide
+    fitToViewport: true     # Auto-scale to eliminate scrolling
+    compactCards: true      # Reduce card size and padding
+```
 
-**Implementation**:
+### Example: Radial Layout Config (Future)
+
+```yaml
+layout:
+  type: "radial"
+  options:
+    centerComponent: "api-gateway"  # Hub component
+    radius: 300                     # Distance from center
+    angleSpacing: 45               # Degrees between nodes
+```
+
+## Problems Solved
+
+### 1. Scrolling Issue in Original Design
+**Problem**: Users had to scroll to see all components in the visualization
+**Solution**:
+- Added LayerSidebar to show all layers at once
+- Implemented auto-scaling viewport with `overflow: hidden`
+- Compact card mode to fit more in viewport
+
+### 2. Single Layout Limitation
+**Problem**: Vertical layout doesn't suit all architecture patterns
+**Solution**:
+- Pluggable layout system with LayoutRouter
+- Scenario-driven configuration
+- Multiple layout engines for different pattern types
+
+### 3. Layer Organization Not Visible
+**Problem**: No way to see which components belong to which architectural layer
+**Solution**:
+- LayerSidebar showing all layers with descriptions
+- Hover highlighting to show layer-component associations
+- Color-coded layer indicators
+
+### 4. Svelte 5 Effect_Orphan Error (Previous Session)
+**Problem**: Using Svelte 5 runes in plain Vite setup caused persistent errors
+**Solution**: Downgraded to Svelte 4 with stable component architecture
+
+## Current Plan: Next Features
+
+### Milestone 2: Interactive Features (In Progress)
+- ✅ Pattern overlay with educational content
+- ✅ Scenario switcher dropdown
+- ✅ Layer sidebar with hover highlighting
+- ✅ Pluggable layout system
+- 📋 Implement horizontal layout
+- 📋 Implement radial layout
+- 📋 Node detail panel enhancements
+
+### Milestone 3: Live Data Flow (Upcoming)
+**Goal**: Visualize real-time message flow through architecture
+
+**Task #2: Add Redpanda Metrics Collector**
 1. Add Redpanda Admin API client to backend
 2. Poll topic metrics (message rates, consumer lag)
 3. Detect active producers/consumers
 4. Stream activity events via WebSocket
 
-**WebSocket Event Types** (new):
-```go
-type DataFlowActivity struct {
-    EdgeID    string  // Which edge is active
-    Rate      float64 // Messages per second
-    Direction string  // "produce" or "consume"
-}
-```
-
-**Files to Create/Modify**:
-- `backend/pkg/telemetry/redpanda.go` (new - Redpanda client)
-- `backend/pkg/models/events.go` (add DataFlowActivity type)
-- `backend/pkg/api/handler.go` (broadcast activity events)
-
-### Task #3: Implement Particle Animations 📋 TODO
-**Goal**: Visualize live data flowing through edges
-
-**Implementation**:
-1. SVG particle system in SimpleGraph.svelte
+**Task #3: Implement Particle Animations**
+1. SVG particle system in layout components
 2. Particles spawn at edge source, travel to target
-3. Speed/frequency based on message rate from telemetry
+3. Speed/frequency based on message rate
 4. Color-coded by edge type
 5. Nodes pulse when actively processing
 
-**CSS/Animation**:
-- SVG `<circle>` elements animated along path
-- `animateMotion` or JavaScript-based animation
-- Glow filters for particles
-- Opacity fade-in/fade-out
-
-**Files to Modify**:
-- `frontend/src/lib/components/SimpleGraph.svelte` (add particle rendering)
-- `frontend/src/lib/stores/websocket.ts` (handle activity events)
-
-## Next Steps
-
-1. **Complete Visual Redesign** (Task #1)
-   - Rewrite SimpleGraph.svelte with dark theme
-   - Add glowing effects to nodes and edges
-   - Test in browser
-
-2. **Add Redpanda Telemetry** (Task #2)
-   - Implement Redpanda Admin API client
-   - Stream activity data via WebSocket
-   - Test with scenario-01 stubs
-
-3. **Implement Particle Animations** (Task #3)
-   - Add SVG particle system
-   - Animate based on live telemetry
-   - Polish animations and timing
-
-4. **Testing & Validation**
-   - Generate real traffic (curl to supply-api, trigger Redpanda messages)
-   - Verify particles animate along correct edges
-   - Validate performance with high message rates
+### Milestone 4: Advanced Scenarios
+- Deploy scenario-02, scenario-03, etc.
+- Different layout types per scenario
+- More complex component interactions
+- Multi-scenario comparisons
 
 ## Commands Reference
 
@@ -213,28 +338,71 @@ kubectl rollout restart deployment/cluster-viz -n cluster-viz
 kubectl wait --for=condition=Available deployment/cluster-viz -n cluster-viz --timeout=60s
 ```
 
-**Check graph API**:
+**Check APIs**:
 ```bash
-curl -s http://localhost:9090/api/graph | python3 -m json.tool
+# List scenarios
+curl -s http://localhost:9090/api/scenarios | jq '.'
+
+# Get scenario with layout config
+curl -s http://localhost:9090/api/scenario/scenario-01 | jq '.layout'
+
+# Get logical graph
+curl -s http://localhost:9090/api/graph?scenario=scenario-01 | jq '{layers, components}'
 ```
 
-**Test Redpanda (when implemented)**:
+**View logs**:
 ```bash
-kubectl exec -n redpanda redpanda-0 -- rpk topic produce test-topic
-kubectl exec -n redpanda redpanda-0 -- rpk topic consume test-topic
+kubectl logs -n cluster-viz -l app=cluster-viz -f
 ```
 
 ## Notes
 
 - Always use Svelte 4 (not 5) for this project
-- Custom graph component works better than @xyflow for our use case
-- Filter infrastructure namespaces to keep graph focused on lessons
-- Real-time updates via WebSocket are working well
+- Layout configuration is per-scenario in architecture.yaml
+- Scenario loader tries ConfigMap first, falls back to filesystem
 - k3d uses `local-path` storage class (not `standard` like Kind)
+- Distroless final image (no shell tools available in pod)
+
+## Resume Instructions
+
+### To Continue This Session:
+
+1. **Start cluster** (if stopped):
+   ```bash
+   k3d cluster start cloud-architecture-sandbox
+   kubectl wait --for=condition=Ready nodes --all --timeout=120s
+   ```
+
+2. **Port-forward to dashboard**:
+   ```bash
+   kubectl port-forward -n cluster-viz svc/cluster-viz 9090:80 &
+   ```
+
+3. **Open in browser**:
+   ```bash
+   open http://localhost:9090
+   ```
+
+4. **Expected UI**:
+   - Layer sidebar on left (280px) with 4 layers
+   - Main visualization with 4 components vertically centered
+   - Hover over layer highlights corresponding components
+   - No scrolling required
+   - Help button opens pattern overlay
+   - Scenario switcher in header
+
+### Current Task Status
+
+- ✅ Task #1: Dark theme redesign - COMPLETE
+- ✅ Task #11-16: Pluggable layout system - COMPLETE
+- 📋 Task #2: Add Redpanda metrics collector - NOT STARTED
+- 📋 Task #3: Implement particle animations - NOT STARTED
 
 ## Questions / Decisions Needed
 
-- What color scheme for different node types? (Deployment, Pod, Service, etc.)
-- Should particles be persistent or fade out after traveling?
-- How to handle high message rates (thousands per second)?
-- Should we aggregate activity data or show individual messages?
+- ✅ Color scheme for node types - DECIDED
+- ✅ Layout architecture - DECIDED (pluggable system)
+- ✅ Sidebar design - DECIDED (Discord-like layer sidebar)
+- Should we implement horizontal layout next or move to live data flow?
+- Which scenario should get horizontal layout (pipeline pattern)?
+- How to handle high message rates in particle animations?

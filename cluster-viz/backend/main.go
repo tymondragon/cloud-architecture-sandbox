@@ -11,6 +11,7 @@ import (
 
 	"github.com/tymondragon/cloud-architecture-sandbox/cluster-viz/pkg/api"
 	"github.com/tymondragon/cloud-architecture-sandbox/cluster-viz/pkg/k8s"
+	"github.com/tymondragon/cloud-architecture-sandbox/cluster-viz/pkg/scenario"
 )
 
 func main() {
@@ -29,8 +30,16 @@ func main() {
 	// Create resource watcher
 	watcher := k8s.NewResourceWatcher(clientset, dynamicClient, graphBuilder)
 
+	// Create scenario loader
+	scenariosPath := os.Getenv("SCENARIOS_PATH")
+	if scenariosPath == "" {
+		scenariosPath = "/scenarios"
+	}
+	scenarioLoader := scenario.NewLoader(clientset, "cluster-viz", scenariosPath)
+	log.Printf("Scenario loader created (path: %s)", scenariosPath)
+
 	// Create API handler
-	handler := api.NewHandler(graphBuilder, watcher)
+	handler := api.NewHandler(graphBuilder, watcher, scenarioLoader)
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

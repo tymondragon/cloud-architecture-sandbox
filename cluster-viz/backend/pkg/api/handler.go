@@ -7,22 +7,26 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/tymondragon/cloud-architecture-sandbox/cluster-viz/pkg/k8s"
 	"github.com/tymondragon/cloud-architecture-sandbox/cluster-viz/pkg/models"
+	"github.com/tymondragon/cloud-architecture-sandbox/cluster-viz/pkg/scenario"
 	"nhooyr.io/websocket"
 )
 
-
+//go:embed frontend/dist
 var frontendFS embed.FS
 
 // Handler manages HTTP and WebSocket connections
 type Handler struct {
-	graphBuilder *k8s.GraphBuilder
-	watcher      *k8s.ResourceWatcher
-	hub          *Hub
+	graphBuilder   *k8s.GraphBuilder
+	watcher        *k8s.ResourceWatcher
+	hub            *Hub
+	scenarioLoader *scenario.Loader
+	currentScenario string // Currently active scenario ID
 }
 
 // Hub manages WebSocket clients
@@ -41,7 +45,7 @@ type Client struct {
 }
 
 // NewHandler creates a new HTTP/WebSocket handler
-func NewHandler(graphBuilder *k8s.GraphBuilder, watcher *k8s.ResourceWatcher) *Handler {
+func NewHandler(graphBuilder *k8s.GraphBuilder, watcher *k8s.ResourceWatcher, scenarioLoader *scenario.Loader) *Handler {
 	hub := &Hub{
 		clients:    make(map[*Client]bool),
 		broadcast:  make(chan models.GraphEvent, 100),
@@ -50,9 +54,11 @@ func NewHandler(graphBuilder *k8s.GraphBuilder, watcher *k8s.ResourceWatcher) *H
 	}
 
 	return &Handler{
-		graphBuilder: graphBuilder,
-		watcher:      watcher,
-		hub:          hub,
+		graphBuilder:    graphBuilder,
+		watcher:         watcher,
+		hub:             hub,
+		scenarioLoader:  scenarioLoader,
+		currentScenario: "scenario-01", // Default to scenario-01
 	}
 }
 
@@ -64,28 +70,136 @@ func (h *Handler) Start(ctx context.Context) {
 
 // ServeHTTP routes requests
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.URL.Path {
-	case "/api/graph":
-		h.handleGraph(w, r)
-	case "/api/ws":
-		h.handleWebSocket(w, r)
-	default:
-		h.handleStatic(w, r)
+	// Handle API routes
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		switch {
+		case r.URL.Path == "/api/graph":
+			h.handleGraph(w, r)
+		case r.URL.Path == "/api/scenarios":
+			h.handleScenarios(w, r)
+		case strings.HasPrefix(r.URL.Path, "/api/scenario/"):
+			h.handleScenario(w, r)
+		case r.URL.Path == "/api/ws":
+			h.handleWebSocket(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+		return
 	}
+
+	// Handle static files
+	h.handleStatic(w, r)
 }
 
-// handleGraph returns the full graph snapshot
+// handleGraph returns the logical graph for the current scenario
 func (h *Handler) handleGraph(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	graph := h.graphBuilder.Snapshot()
+	// Get scenario ID from query param or use current
+	scenarioID := r.URL.Query().Get("scenario")
+	if scenarioID == "" {
+		scenarioID = h.currentScenario
+	}
+
+	// Load scenario metadata
+	scenarioData, err := h.scenarioLoader.Load(r.Context(), scenarioID)
+	if err != nil {
+		log.Printf("Error loading scenario %s: %v", scenarioID, err)
+		http.Error(w, "Failed to load scenario", http.StatusInternalServerError)
+		return
+	}
+
+	// Build logical graph from scenario metadata
+	mapper := scenario.NewMapper(scenarioData, h.graphBuilder)
+	logicalGraph := mapper.BuildLogicalGraph()
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(graph); err != nil {
+	if err := json.NewEncoder(w).Encode(logicalGraph); err != nil {
 		log.Printf("Error encoding graph: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// handleScenarios returns the list of available scenarios
+func (h *Handler) handleScenarios(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	scenarioIDs, err := h.scenarioLoader.ListScenarios(r.Context())
+	if err != nil {
+		log.Printf("Error listing scenarios: %v", err)
+		http.Error(w, "Failed to list scenarios", http.StatusInternalServerError)
+		return
+	}
+
+	// Load basic metadata for each scenario
+	type ScenarioSummary struct {
+		ID          string   `json:"id"`
+		Title       string   `json:"title"`
+		Description string   `json:"description"`
+		Patterns    []string `json:"patterns"`
+	}
+
+	var summaries []ScenarioSummary
+	for _, scenarioID := range scenarioIDs {
+		scenarioData, err := h.scenarioLoader.Load(r.Context(), scenarioID)
+		if err != nil {
+			log.Printf("Error loading scenario %s: %v", scenarioID, err)
+			continue
+		}
+
+		patterns := make([]string, 0)
+		for _, p := range scenarioData.Patterns.Primary {
+			patterns = append(patterns, p.Name)
+		}
+		for _, p := range scenarioData.Patterns.Secondary {
+			patterns = append(patterns, p.Name)
+		}
+
+		summaries = append(summaries, ScenarioSummary{
+			ID:          scenarioData.Metadata.ID,
+			Title:       scenarioData.Metadata.Title,
+			Description: scenarioData.Metadata.Description,
+			Patterns:    patterns,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(summaries); err != nil {
+		log.Printf("Error encoding scenarios: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// handleScenario returns detailed information about a specific scenario
+func (h *Handler) handleScenario(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract scenario ID from path (/api/scenario/{id})
+	scenarioID := strings.TrimPrefix(r.URL.Path, "/api/scenario/")
+	if scenarioID == "" {
+		http.Error(w, "Scenario ID required", http.StatusBadRequest)
+		return
+	}
+
+	scenarioData, err := h.scenarioLoader.Load(r.Context(), scenarioID)
+	if err != nil {
+		log.Printf("Error loading scenario %s: %v", scenarioID, err)
+		http.Error(w, "Scenario not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(scenarioData); err != nil {
+		log.Printf("Error encoding scenario: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
